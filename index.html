@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>英语填词游戏</title>
+<style>
+:root{--bg:#f5f0e8;--paper:#fffef7;--text:#1a1a1a;--red:#b22222;--hl:#e8c8c0;--ac:#f0c8c0;--ok:#c8e6c9;--err:#ffcdd2;--wl:#fce8e8;--hint:#d4c5a9}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Microsoft YaHei','Georgia',serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;justify-content:center;padding:20px}
+#app{max-width:880px;width:100%}
+header{text-align:center;padding:16px 0;margin-bottom:14px;border-bottom:2px double var(--text)}
+header h1{font-size:1.8rem;letter-spacing:2px;margin-bottom:2px}
+header .sub{font-size:.75rem;color:#888;letter-spacing:1px}
+.tabs{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+.tab{padding:6px 16px;border:1px solid #ccc;background:var(--paper);cursor:pointer;border-radius:3px;font-family:inherit;font-size:.8rem}
+.tab.sel{background:var(--text);color:var(--paper)}
+.main{display:flex;gap:22px;align-items:flex-start}
+.board{flex-shrink:0}
+.side{flex:1;min-width:250px}
+.pzt{text-align:center;font-size:1rem;font-weight:bold;margin-bottom:6px}
+.info{text-align:center;font-size:.72rem;color:#999;margin-bottom:6px}
+table.g{border-collapse:collapse;margin:0 auto}
+.g td{width:34px;height:34px;border:1px solid #ccc;text-align:center;vertical-align:middle;padding:0;position:relative;cursor:pointer;background:var(--paper);transition:background .1s}
+.g td.blk{background:var(--hint);border-color:var(--hint);cursor:default}
+.g td.hl{background:var(--wl)}
+.g td.ac{background:var(--ac)!important;box-shadow:inset 0 0 0 2px #c0392b}
+.g td.ok{background:var(--ok)}
+.g td.bad{background:var(--err)}
+.g td .dot{position:absolute;top:1px;left:2px;font-size:.45rem;color:#666;line-height:1}
+.g td input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-family:'Georgia','Microsoft YaHei',serif;font-size:1.05rem;font-weight:bold;outline:none;text-transform:uppercase;padding:0;color:var(--text);-webkit-user-select:text;user-select:text}
+.g td input.hint{color:var(--hint)}
+.g td input:read-only{background:#faf5ed;cursor:default}
+.g td.hl input:read-only{background:#f0dcd8}
+.g td input:read-only:focus{outline:none}
+.sec{margin-bottom:10px}
+.sec h3{font-size:.8rem;letter-spacing:1px;color:var(--red);margin-bottom:3px;border-bottom:1px solid #ddd;padding-bottom:2px}
+.wlist{display:flex;flex-wrap:wrap;gap:4px;font-size:.76rem;line-height:1.65}
+.wlist .wt{border:1px solid #ddd;border-radius:3px;padding:1px 7px;background:var(--paper);font-family:'Georgia','Microsoft YaHei',serif}
+.wlist .wt.wok{background:#c8e6c9;border-color:#2e7d32;color:#2e7d32}
+.btns{text-align:center;margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.btn{padding:8px 18px;border:1px solid #ccc;border-radius:3px;font-family:inherit;font-size:.8rem;cursor:pointer;background:var(--paper)}
+.btn:hover{background:#e8e0d0}
+.btn-go{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-go:hover{background:#8b1a1a}
+.msg{text-align:center;min-height:22px;font-size:.85rem;color:var(--red);margin-top:8px}
+.timer{text-align:center;font-size:1.1rem;margin:4px 0;color:var(--red);font-weight:bold}
+footer{text-align:center;padding:12px;color:#999;font-size:.68rem}
+.prefill{background:#faf5ed!important}
+/* Start screen */
+.start-box{text-align:center;padding:40px 20px}
+.start-box .big-title{font-size:2rem;letter-spacing:3px;margin-bottom:6px}
+.start-box .diff-label{font-size:.9rem;color:#888;margin-bottom:16px}
+.start-btn{padding:12px 40px;font-size:1.1rem;font-family:inherit;background:var(--red);color:#fff;border:none;border-radius:4px;cursor:pointer;letter-spacing:2px;margin-top:20px}
+.start-btn:hover{background:#8b1a1a}
+/* Result screen */
+.result-box{text-align:center;padding:20px}
+.result-score{font-size:3rem;font-weight:bold;margin:16px 0}
+.result-score.perfect{color:#2e7d32}
+.result-score.good{color:#f57f17}
+.result-score.ok{color:#e65100}
+.result-score.low{color:#b22222}
+.result-table{width:100%;max-width:600px;margin:20px auto;border-collapse:collapse;font-size:.8rem}
+.result-table th{background:var(--text);color:var(--paper);padding:6px 10px}
+.result-table td{padding:5px 10px;border-bottom:1px solid #ddd}
+.result-table tr.wrong td{background:#fff3f3}
+.result-table tr.correct td{background:#f1f8e9}
+.result-table .user-ans{font-family:'Georgia',monospace;font-weight:bold}
+.result-table .user-ans.bad{color:var(--red)}
+.result-table .user-ans.good{color:#2e7d32}
+@media(max-width:640px){.main{flex-direction:column;align-items:center}.g td{width:28px;height:28px}.g td input{font-size:.85rem}.result-score{font-size:2rem}}
+</style>
+</head>
+<body><div id="app"></div>
+<script>
+const PUZZLE_GROUPS = {
+  "Easy": [
+    {
+      title: "\u5b66\u6821\u751f\u6d3b",
+      grid: [
+        " BOOK   ",
+        "P   GT  ",
+        "APENRE  ",
+        "PACLASS ",
+        "EG  DT  ",
+        "READESK "
+      ],
+      across: ["BOOK", "CLASS", "DESK", "PEN", "READ"],
+      down: ["GRADE", "PAGE", "PAPER", "TEST"],
+      words: [
+          {word:"PEN",dir:"across",r:2,c:1},
+          {word:"GRADE",dir:"down",r:1,c:4},
+          {word:"DESK",dir:"across",r:5,c:3},
+          {word:"PAGE",dir:"down",r:2,c:1},
+          {word:"READ",dir:"across",r:5,c:0},
+          {word:"CLASS",dir:"across",r:3,c:2},
+          {word:"PAPER",dir:"down",r:1,c:0},
+          {word:"TEST",dir:"down",r:1,c:5},
+          {word:"BOOK",dir:"across",r:0,c:1}
+      ]
+    },
+    {
+      title: "\u98df\u7269\u996e\u6599",
+      grid: [
+        "MFOOD   ",
+        "ER  J  W",
+        "AUSOUP A",
+        "TI RICET",
+        " T  CAKE",
+        "  BREADR"
+      ],
+      across: ["BREAD", "CAKE", "FOOD", "RICE", "SOUP"],
+      down: ["FRUIT", "JUICE", "MEAT", "WATER"],
+      words: [
+          {word:"SOUP",dir:"across",r:2,c:2},
+          {word:"JUICE",dir:"down",r:1,c:4},
+          {word:"RICE",dir:"across",r:3,c:3},
+          {word:"CAKE",dir:"across",r:4,c:4},
+          {word:"FRUIT",dir:"down",r:0,c:1},
+          {word:"WATER",dir:"down",r:1,c:7},
+          {word:"MEAT",dir:"down",r:0,c:0},
+          {word:"BREAD",dir:"across",r:5,c:2},
+          {word:"FOOD",dir:"across",r:0,c:1}
+      ]
+    },
+    {
+      title: "\u989c\u8272\u81ea\u7136",
+      grid: [
+        " CLOUD B",
+        " OWHITER",
+        "BLACKRDI",
+        " O   AAG",
+        "GREENIRH",
+        " BROWNKT"
+      ],
+      across: ["BLACK", "BROWN", "CLOUD", "GREEN", "WHITE"],
+      down: ["BRIGHT", "COLOR", "DARK", "RAIN"],
+      words: [
+          {word:"BLACK",dir:"across",r:2,c:0},
+          {word:"BROWN",dir:"across",r:5,c:1},
+          {word:"RAIN",dir:"down",r:2,c:5},
+          {word:"COLOR",dir:"down",r:0,c:1},
+          {word:"CLOUD",dir:"across",r:0,c:1},
+          {word:"BRIGHT",dir:"down",r:0,c:7},
+          {word:"GREEN",dir:"across",r:4,c:0},
+          {word:"WHITE",dir:"across",r:1,c:2},
+          {word:"DARK",dir:"down",r:2,c:6}
+      ]
+    },
+  ],
+  "Medium": [
+    {
+      title: "\u81ea\u7136\u63a2\u7d22",
+      grid: [
+        "RIVERSTORMH",
+        "E PEARTH  O",
+        "ABL  BIRDWR",
+        "GEAC FFISHS",
+        "LANLTREENAE",
+        "ESTONE  AL ",
+        " T U SLAKE ",
+        "WIND HOCEAN"
+      ],
+      across: ["BIRD", "EARTH", "FISH", "LAKE", "OCEAN", "RIVER", "STONE", "STORM", "TREE", "WIND"],
+      down: ["BEAST", "CLOUD", "EAGLE", "FRESH", "HORSE", "PLANT", "SNAKE", "WHALE"],
+      words: [
+          {word:"FISH",dir:"across",r:3,c:6},
+          {word:"STONE",dir:"across",r:5,c:1},
+          {word:"CLOUD",dir:"down",r:3,c:3},
+          {word:"WHALE",dir:"down",r:2,c:9},
+          {word:"LAKE",dir:"across",r:6,c:6},
+          {word:"SNAKE",dir:"down",r:3,c:8},
+          {word:"BEAST",dir:"down",r:2,c:1},
+          {word:"FRESH",dir:"down",r:3,c:5},
+          {word:"PLANT",dir:"down",r:1,c:2},
+          {word:"TREE",dir:"across",r:4,c:4},
+          {word:"EAGLE",dir:"down",r:1,c:0},
+          {word:"RIVER",dir:"across",r:0,c:0},
+          {word:"OCEAN",dir:"across",r:7,c:6},
+          {word:"WIND",dir:"across",r:7,c:0},
+          {word:"EARTH",dir:"across",r:1,c:3},
+          {word:"STORM",dir:"across",r:0,c:5},
+          {word:"HORSE",dir:"down",r:0,c:10},
+          {word:"BIRD",dir:"across",r:2,c:5}
+      ]
+    },
+    {
+      title: "\u4eba\u4f53\u79d1\u5b66",
+      grid: [
+        "   STASTEC",
+        "BLOODSENSE",
+        "MPRUTOUCHL",
+        "UUGNSMELLL",
+        "SLADPBRAIN",
+        "CSNSIGHTV ",
+        "LEBONERVE ",
+        "E  HEARTR "
+      ],
+      across: ["BLOOD", "BONE", "BRAIN", "HEART", "NERVE", "SENSE", "SIGHT", "SMELL", "TASTE", "TOUCH"],
+      down: ["CELL", "LIVER", "MUSCLE", "ORGAN", "PULSE", "SOUND", "SPINE"],
+      words: [
+          {word:"SMELL",dir:"across",r:3,c:4},
+          {word:"SPINE",dir:"down",r:3,c:4},
+          {word:"BONE",dir:"across",r:6,c:2},
+          {word:"ORGAN",dir:"down",r:1,c:2},
+          {word:"HEART",dir:"across",r:7,c:3},
+          {word:"SENSE",dir:"across",r:1,c:5},
+          {word:"BLOOD",dir:"across",r:1,c:0},
+          {word:"MUSCLE",dir:"down",r:2,c:0},
+          {word:"LIVER",dir:"down",r:3,c:8},
+          {word:"SIGHT",dir:"across",r:5,c:3},
+          {word:"NERVE",dir:"across",r:6,c:4},
+          {word:"CELL",dir:"down",r:0,c:9},
+          {word:"PULSE",dir:"down",r:2,c:1},
+          {word:"BRAIN",dir:"across",r:4,c:5},
+          {word:"TASTE",dir:"across",r:0,c:4},
+          {word:"SOUND",dir:"down",r:0,c:3},
+          {word:"TOUCH",dir:"across",r:2,c:4}
+      ]
+    },
+    {
+      title: "\u7ecf\u6d4e\u8d38\u6613",
+      grid: [
+        "BUYER VALUE",
+        "UMBANKGOODS",
+        "DACS  TRADE",
+        "GRASTOCKNE ",
+        "EKSELLERDB ",
+        "TEHTPRICEI ",
+        " TPROFITBT ",
+        " MONEY  T  "
+      ],
+      across: ["BANK", "BUYER", "GOODS", "MONEY", "PRICE", "PROFIT", "SELLER", "STOCK", "TRADE", "VALUE"],
+      down: ["ASSET", "BUDGET", "CASH", "DEBIT", "DEBT", "LOAN", "MARKET"],
+      words: [
+          {word:"STOCK",dir:"across",r:3,c:3},
+          {word:"GOODS",dir:"across",r:1,c:6},
+          {word:"ASSET",dir:"down",r:1,c:3},
+          {word:"BUDGET",dir:"down",r:0,c:0},
+          {word:"SELLER",dir:"across",r:4,c:2},
+          {word:"LOAN",dir:"down",r:0,c:8},
+          {word:"VALUE",dir:"across",r:0,c:6},
+          {word:"TRADE",dir:"across",r:2,c:6},
+          {word:"MARKET",dir:"down",r:1,c:1},
+          {word:"MONEY",dir:"across",r:7,c:1},
+          {word:"BUYER",dir:"across",r:0,c:0},
+          {word:"BANK",dir:"across",r:1,c:2},
+          {word:"CASH",dir:"down",r:2,c:2},
+          {word:"DEBIT",dir:"down",r:2,c:9},
+          {word:"DEBT",dir:"down",r:4,c:8},
+          {word:"PROFIT",dir:"across",r:6,c:2},
+          {word:"PRICE",dir:"across",r:5,c:4}
+      ]
+    },
+  ],
+  "Hard": [
+    {
+      title: "\u54c1\u5fb7\u4fee\u517b",
+      grid: [
+        "J   LOYAL   ",
+        "U  D   BRAVE",
+        "SPRIDEVIRTUE",
+        "T PGRACE F  ",
+        "IHONORMORAL ",
+        "CHWID  H IKW",
+        "EOETETRUSTII",
+        " NRYC  M HNS",
+        "PEACENOBLEDD",
+        " S  NVALOR O",
+        " T  T MERITM"
+      ],
+      across: ["BRAVE", "GRACE", "HONOR", "LOYAL", "MERIT", "MORAL", "NOBLE", "PEACE", "PRIDE", "TRUST", "VALOR", "VIRTUE"],
+      down: ["DECENT", "DIGNITY", "FAITH", "HONEST", "HUMBLE", "JUSTICE", "KIND", "POWER", "WISDOM"],
+      words: [
+          {word:"HONOR",dir:"across",r:4,c:1},
+          {word:"PEACE",dir:"across",r:8,c:0},
+          {word:"DIGNITY",dir:"down",r:1,c:3},
+          {word:"HUMBLE",dir:"down",r:5,c:7},
+          {word:"MERIT",dir:"across",r:10,c:6},
+          {word:"VALOR",dir:"across",r:9,c:5},
+          {word:"TRUST",dir:"across",r:6,c:5},
+          {word:"NOBLE",dir:"across",r:8,c:5},
+          {word:"HONEST",dir:"down",r:5,c:1},
+          {word:"PRIDE",dir:"across",r:2,c:1},
+          {word:"DECENT",dir:"down",r:5,c:4},
+          {word:"WISDOM",dir:"down",r:5,c:11},
+          {word:"GRACE",dir:"across",r:3,c:3},
+          {word:"LOYAL",dir:"across",r:0,c:4},
+          {word:"MORAL",dir:"across",r:4,c:6},
+          {word:"JUSTICE",dir:"down",r:0,c:0},
+          {word:"BRAVE",dir:"across",r:1,c:7},
+          {word:"FAITH",dir:"down",r:3,c:9},
+          {word:"VIRTUE",dir:"across",r:2,c:6},
+          {word:"KIND",dir:"down",r:5,c:10},
+          {word:"POWER",dir:"down",r:3,c:2}
+      ]
+    },
+    {
+      title: "\u5b87\u5b99\u79d1\u5b66",
+      grid: [
+        "GALAXY FORCE",
+        "F NN  PSPACE",
+        "ULEEGMR    N",
+        "SIBURAOATOME",
+        "IGUTASTELLAR",
+        "OHLRVSOLARGG",
+        "NTAOI N   NY",
+        "QUANTUMATTER",
+        "    YPLANET ",
+        "   COSMIC   ",
+        " COMETORBIT "
+      ],
+      across: ["ATOM", "COMET", "COSMIC", "FORCE", "GALAXY", "MATTER", "ORBIT", "PLANET", "QUANTUM", "SOLAR", "SPACE", "STELLAR"],
+      down: ["ENERGY", "FUSION", "GRAVITY", "LIGHT", "MAGNET", "MASS", "NEBULA", "NEUTRON", "PROTON"],
+      words: [
+          {word:"STELLAR",dir:"across",r:4,c:5},
+          {word:"MAGNET",dir:"down",r:3,c:10},
+          {word:"MATTER",dir:"across",r:7,c:6},
+          {word:"ATOM",dir:"across",r:3,c:7},
+          {word:"GRAVITY",dir:"down",r:2,c:4},
+          {word:"ENERGY",dir:"down",r:1,c:11},
+          {word:"MASS",dir:"down",r:2,c:5},
+          {word:"NEBULA",dir:"down",r:1,c:2},
+          {word:"SOLAR",dir:"across",r:5,c:5},
+          {word:"QUANTUM",dir:"across",r:7,c:0},
+          {word:"SPACE",dir:"across",r:1,c:7},
+          {word:"NEUTRON",dir:"down",r:1,c:3},
+          {word:"PLANET",dir:"across",r:8,c:5},
+          {word:"FORCE",dir:"across",r:0,c:7},
+          {word:"COSMIC",dir:"across",r:9,c:3},
+          {word:"PROTON",dir:"down",r:1,c:6},
+          {word:"FUSION",dir:"down",r:1,c:0},
+          {word:"GALAXY",dir:"across",r:0,c:0},
+          {word:"LIGHT",dir:"down",r:2,c:1},
+          {word:"ORBIT",dir:"across",r:10,c:6},
+          {word:"COMET",dir:"across",r:10,c:1}
+      ]
+    },
+    {
+      title: "\u6587\u5b66\u827a\u672f",
+      grid: [
+        "METER      C",
+        "S  ASTORY FO",
+        "A  U RHYMEAM",
+        "T LT A    BE",
+        "IEYH GNOVELD",
+        "RPROSESTYLEY",
+        "EIIRODVERSE ",
+        " CC NY DRAMA",
+        "  GENRE   Y ",
+        "SCENE     T ",
+        " PLOTHEME H "
+      ],
+      across: ["DRAMA", "GENRE", "METER", "NOVEL", "PLOT", "PROSE", "RHYME", "SCENE", "STORY", "STYLE", "THEME", "VERSE"],
+      down: ["AUTHOR", "COMEDY", "EPIC", "FABLE", "LYRIC", "MYTH", "SATIRE", "SONNET", "TRAGEDY"],
+      words: [
+          {word:"NOVEL",dir:"across",r:4,c:6},
+          {word:"PROSE",dir:"across",r:5,c:1},
+          {word:"FABLE",dir:"down",r:1,c:10},
+          {word:"STYLE",dir:"across",r:5,c:6},
+          {word:"SONNET",dir:"down",r:5,c:4},
+          {word:"SCENE",dir:"across",r:9,c:0},
+          {word:"MYTH",dir:"down",r:7,c:10},
+          {word:"TRAGEDY",dir:"down",r:1,c:5},
+          {word:"LYRIC",dir:"down",r:3,c:2},
+          {word:"THEME",dir:"across",r:10,c:4},
+          {word:"DRAMA",dir:"across",r:7,c:7},
+          {word:"AUTHOR",dir:"down",r:1,c:3},
+          {word:"METER",dir:"across",r:0,c:0},
+          {word:"GENRE",dir:"across",r:8,c:2},
+          {word:"STORY",dir:"across",r:1,c:4},
+          {word:"VERSE",dir:"across",r:6,c:6},
+          {word:"EPIC",dir:"down",r:4,c:1},
+          {word:"SATIRE",dir:"down",r:1,c:0},
+          {word:"COMEDY",dir:"down",r:0,c:11},
+          {word:"PLOT",dir:"across",r:10,c:1},
+          {word:"RHYME",dir:"across",r:2,c:5}
+      ]
+    },
+  ],
+};
+const LABELS=["Easy","Medium","Hard"];
+const TIME_LIMIT=180;
+
+let puzIdx=0, grid=[], ar=-1, ac=-1, sec=TIME_LIMIT, iv=null, puz=null;
+let wordStarts={}, wordPositions=[], hintCells=new Set();
+let gameState='start', hintRemaining=3, autoAdvDir=null, composing=false;
+
+function parse(p){
+  let raw=p.grid, h=raw.length, w=Math.max(...raw.map(r=>r.length));
+  grid=[]; for(let r=0;r<h;r++){grid[r]=[];for(let c=0;c<w;c++){grid[r][c]=raw[r][c]||' ';}}
+  wordStarts={}; wordPositions=[]; hintCells=new Set();
+
+  let num=0;
+  for(let wd of p.words){
+    num++;
+    let cells=[];
+    if(wd.dir==='across'){
+      for(let i=0;i<wd.word.length;i++){cells.push({r:wd.r,c:wd.c+i,ch:wd.word[i]});}
+    } else {
+      for(let i=0;i<wd.word.length;i++){cells.push({r:wd.r+i,c:wd.c,ch:wd.word[i]});}
+    }
+    wordStarts[wd.r+','+wd.c]=num;
+    wordPositions.push({num:num,dir:wd.dir,word:wd.word,cells:cells});
+  }
+
+  // ~30% hints per word
+  hintCells=new Set();
+  for(let wp of wordPositions){
+    let n=Math.max(1,Math.floor(wp.cells.length*0.3));
+    let indices=[...Array(wp.cells.length).keys()];
+    indices.sort(()=>Math.random()-0.5);
+    for(let i=0;i<n;i++){
+      let{r,c}=wp.cells[indices[i]];
+      hintCells.add(`${r},${c}`);
+    }
+  }
+}
+
+function load(i){
+  if(iv)clearInterval(iv); iv=null;
+  puzIdx=i;
+  let group=PUZZLE_GROUPS[LABELS[i]];
+  puz=group[Math.floor(Math.random()*group.length)];
+  ar=-1;ac=-1;sec=TIME_LIMIT;parse(puz);
+  gameState='start'; hintRemaining=3;
+  render();
+}
+
+function startGame(){
+  gameState='playing'; sec=TIME_LIMIT; hintRemaining=3;
+  render();
+  updateTimer();
+  iv=setInterval(()=>{
+    sec--;
+    updateTimer();
+    if(sec<=0){sec=0; finish();}
+  },1000);
+}
+
+function updateTimer(){
+  let el=document.getElementById('timer');if(!el)return;
+  let m=Math.floor(sec/60),s=sec%60;
+  el.textContent='倒计时 '+m+':'+String(s).padStart(2,'0');
+}
+
+function finish(){
+  if(iv)clearInterval(iv); iv=null;
+  gameState='finished';
+
+  // Collect all user-fillable cells (non-hint)
+  let userCells=[];
+  let allCells=new Map();
+  for(let wp of wordPositions){
+    for(let cl of wp.cells){
+      let k=`${cl.r},${cl.c}`;
+      if(!allCells.has(k)) allCells.set(k,cl);
+    }
+  }
+
+  let total=0, correct=0;
+  let wordResults=[];
+  for(let wp of wordPositions){
+    let wCorrect=0, wTotal=0;
+    let userAns=[], correctAns=[];
+    for(let cl of wp.cells){
+      let k=`${cl.r},${cl.c}`;
+      let isHint=hintCells.has(k);
+      let inp=document.getElementById('i-'+cl.r+'-'+cl.c);
+      let uv=inp?(inp.value.toUpperCase()||''):'';
+      correctAns.push(cl.ch);
+      userAns.push(uv||'?');
+      if(!isHint){
+        total++;
+        if(uv===cl.ch.toUpperCase()){correct++; wCorrect++;}
+        wTotal++;
+      }
+    }
+    wordResults.push({
+      word:wp.word, dir:wp.dir==='across'?'横':'纵',
+      correct:correctAns.join(''), user:userAns.join(''),
+      wCorrect:wCorrect, wTotal:wTotal
+    });
+  }
+
+  let score=total>0?Math.round(correct/total*100):0;
+  renderResult(score, wordResults, total, correct);
+}
+
+function renderResult(score, wordResults, total, correct){
+  let cls=score===100?'perfect':score>=70?'good':score>=40?'ok':'low';
+  let html=`<header><h1>英语填词游戏</h1></header>`;
+  html+=`<div class="pzt">${puz.title} &mdash; ${LABELS[puzIdx]}</div>`;
+  html+=`<div class="result-box">`;
+  html+=`<div class="result-score ${cls}">${score} / 100</div>`;
+  html+=`<div style="color:#888;margin-bottom:16px">${correct}/${total} 个字母正确</div>`;
+  html+=`<table class="result-table"><thead><tr><th>单词</th><th>方向</th><th>正确答案</th><th>你的答案</th><th>结果</th></tr></thead><tbody>`;
+  for(let wr of wordResults){
+    let allOk=wr.wCorrect===wr.wTotal;
+    html+=`<tr class="${allOk?'correct':'wrong'}">`;
+    html+=`<td><b>${wr.word}</b></td><td>${wr.dir}</td>`;
+    html+=`<td style="font-family:Georgia,monospace">${wr.correct}</td>`;
+    html+=`<td class="user-ans ${allOk?'good':'bad'}">${wr.user}</td>`;
+    html+=`<td>${allOk?'✓':'✗'} ${wr.wCorrect}/${wr.wTotal}</td>`;
+    html+=`</tr>`;
+  }
+  html+=`</tbody></table>`;
+  html+=`<button class="start-btn" onclick="load(puzIdx)" style="margin-top:20px">返回</button>`;
+  html+=`</div>`;
+  html+=`<footer>英语纵横填词游戏</footer>`;
+  document.getElementById('app').innerHTML=html;
+}
+
+function render(){
+  if(gameState==='start'){
+    renderStart();
+    return;
+  }
+  if(gameState==='finished') return;
+
+  let h=grid.length, w=grid[0].length;
+  let allCellSet=new Set();
+  for(let wp of wordPositions) for(let cl of wp.cells) allCellSet.add(`${cl.r},${cl.c}`);
+  let totalCells=allCellSet.size;
+  let fillable=totalCells-hintCells.size;
+
+  let hcl="提示字母"; let hleft=hintRemaining;
+  if(hleft<=0) hcl="已用完";
+
+  let html=`<header><h1>英语填词游戏</h1></header>`;
+  html+=`<div class="tabs">`;
+  LABELS.forEach((l,i)=>html+=`<button class="tab${puzIdx===i?' sel':''}" onclick="load(${i})">${l}</button>`);
+  html+=`</div>`;
+  html+=`<div class="pzt">${puz.title}</div>`;
+  html+=`<div class="info">${totalCells} 个空格 &bull; ${hintCells.size} 个已提示 &bull; <span id="remainHint">${fillable} 个待填</span></div>`;
+  html+=`<div class="timer" id="timer">倒计时 3:00</div>`;
+  html+=`<div class="main"><div class="board"><table class="g">`;
+
+  for(let r=0;r<h;r++){
+    html+=`<tr>`;
+    for(let c=0;c<w;c++){
+      if(grid[r][c]===' '){html+=`<td class="blk"></td>`;continue;}
+      let n=wordStarts[r+','+c]||'';
+      let isHint=hintCells.has(`${r},${c}`);
+      html+=`<td class="cell${isHint?' prefill':''}" id="c-${r}-${c}" data-r="${r}" data-c="${c}">`;
+      if(n)html+=`<span class="dot">${n}</span>`;
+      if(isHint){
+        html+=`<input id="i-${r}-${c}" value="${grid[r][c]}" class="hint" readonly maxlength="1">`;
+      } else {
+        html+=`<input id="i-${r}-${c}" maxlength="1" data-r="${r}" data-c="${c}" autocomplete="nope" name="g${r}x${c}" lang="en" inputmode="latin">`;
+      }
+      html+=`</td>`;
+    }
+    html+=`</tr>`;
+  }
+  html+=`</table></div><div class="side">`;
+
+  let ua=[...new Set(puz.across)], ud=[...new Set(puz.down)];
+  html+=`<div class="sec"><h3>横向词汇</h3><div class="wlist">`;
+  ua.forEach(w=>{html+=`<span class="wt" id="wa-${w}">${w}</span>`;});
+  html+=`</div></div>`;
+  html+=`<div class="sec"><h3>纵向词汇</h3><div class="wlist">`;
+  ud.forEach(w=>{html+=`<span class="wt" id="wd-${w}">${w}</span>`;});
+  html+=`</div></div>`;
+  html+=`</div></div>`;
+
+  html+=`<div class="btns">`;
+  html+=`<button class="btn btn-go" onclick="chk()">检查答案</button>`;
+  html+=`<button class="btn" onclick="useHint()"${hintRemaining<=0?' disabled':''}>${hcl} (${hleft})</button>`;
+  html+=`<button class="btn" onclick="clr()">清空重填</button>`;
+  html+=`<button class="btn" onclick="load(${puzIdx})">重新开始</button>`;
+  html+=`</div>`;
+  html+=`<div class="msg" id="msg"></div><footer>英语纵横填词游戏</footer>`;
+  document.getElementById('app').innerHTML=html;
+  updateTimer();
+}
+
+function renderStart(){
+  let html=`<header><h1>英语填词游戏</h1></header>`;
+  html+=`<div class="start-box">`;
+  html+=`<div class="big-title">英语填词游戏</div>`;
+  html+=`<div class="diff-label">选择难度级别</div>`;
+  html+=`<div class="tabs" style="margin-top:10px">`;
+  LABELS.forEach((l,i)=>html+=`<button class="tab${puzIdx===i?' sel':''}" onclick="pickLevel(${i})">${l}</button>`);
+  html+=`</div>`;
+  html+=`<div style="margin-top:8px;color:#888;font-size:.85rem">${puz.title}</div>`;
+  html+=`<button class="start-btn" onclick="startGame()">开始游戏</button>`;
+  html+=`</div>`;
+  html+=`<footer>英语纵横填词游戏</footer>`;
+  document.getElementById('app').innerHTML=html;
+}
+
+function pickLevel(i){
+  puzIdx=i;
+  let group=PUZZLE_GROUPS[LABELS[i]];
+  puz=group[Math.floor(Math.random()*group.length)];
+  ar=-1;ac=-1;sec=TIME_LIMIT;parse(puz);
+  renderStart();
+}
+
+function findWordCells(r,c,dir){
+  for(let wp of wordPositions){if(wp.dir!==dir)continue;for(let cl of wp.cells){if(cl.r===r&&cl.c===c)return wp;}}
+  return null;
+}
+
+function hl(){
+  document.querySelectorAll('.g td.cell').forEach(td=>td.classList.remove('hl','ac'));
+  if(ar<0||ac<0)return;
+  let wa=findWordCells(ar,ac,'across'), wd=findWordCells(ar,ac,'down');
+  if(wa)wa.cells.forEach(({r,c})=>document.getElementById('c-'+r+'-'+c)?.classList.add('hl'));
+  if(wd)wd.cells.forEach(({r,c})=>document.getElementById('c-'+r+'-'+c)?.classList.add('hl'));
+  document.getElementById('c-'+ar+'-'+ac)?.classList.add('ac');
+}
+
+function focusCell(r,c){
+  let inp=document.getElementById('i-'+r+'-'+c);
+  if(!inp||inp.readOnly)return;
+  ar=r;ac=c;hl();
+  if(document.activeElement!==inp){inp.focus();}
+}
+
+// Delegated event handling
+document.getElementById('app').addEventListener('focusin',function(e){
+  let inp=e.target;
+  if(inp.tagName!=='INPUT'||inp.readOnly||!inp.hasAttribute('data-r'))return;
+  ar=parseInt(inp.getAttribute('data-r'));
+  ac=parseInt(inp.getAttribute('data-c'));
+  hl();
+});
+
+document.getElementById('app').addEventListener('compositionstart',function(e){
+  if(e.target.tagName==='INPUT'&&e.target.hasAttribute('data-r')) composing=true;
+});
+document.getElementById('app').addEventListener('compositionend',function(e){
+  if(e.target.tagName==='INPUT'&&e.target.hasAttribute('data-r')){
+    composing=false;
+    // Process final composed value
+    let inp=e.target;
+    let v=inp.value.replace(/[^A-Za-z]/g,'').slice(-1).toUpperCase();
+    inp.value=v||'';
+    if(!v)return;
+    let r=parseInt(inp.getAttribute('data-r'));
+    let c=parseInt(inp.getAttribute('data-c'));
+    let dir=autoAdvDir;
+    if(!dir){let wa=findWordCells(r,c,'across'),wd=findWordCells(r,c,'down');dir=(wa&&wa.cells.length>=2)?'across':(wd?'down':null);}
+    autoAdvDir=dir;
+    if(dir&&!autoAdvance(r,c,dir)){
+      // Try fallback direction
+      let fb=dir==='across'?'down':'across';
+      if(findWordCells(r,c,fb)){autoAdvDir=fb;autoAdvance(r,c,fb);}
+    }
+  }
+});
+
+document.getElementById('app').addEventListener('input',function(e){
+  let inp=e.target;
+  if(inp.tagName!=='INPUT'||inp.readOnly||!inp.hasAttribute('data-r'))return;
+  if(composing)return; // Ignore IME composition events
+  let v=inp.value.replace(/[^A-Za-z]/g,'').slice(-1).toUpperCase();
+  inp.value=v||'';
+  if(!v)return;
+  // Auto-advance to next cell in word
+  let r=parseInt(inp.getAttribute('data-r'));
+  let c=parseInt(inp.getAttribute('data-c'));
+  let dir=autoAdvDir;
+  if(!dir){let wa=findWordCells(r,c,'across'),wd=findWordCells(r,c,'down');dir=(wa&&wa.cells.length>=2)?'across':(wd?'down':null);}
+  autoAdvDir=dir;
+  if(dir&&!autoAdvance(r,c,dir)){
+    let fb=dir==='across'?'down':'across';
+    if(findWordCells(r,c,fb)){autoAdvDir=fb;autoAdvance(r,c,fb);}
+  }
+});
+
+document.getElementById('app').addEventListener('keydown',function(e){
+  let inp=e.target;
+  if(inp.tagName!=='INPUT'||inp.readOnly||!inp.hasAttribute('data-r'))return;
+  let r=parseInt(inp.getAttribute('data-r'));
+  let c=parseInt(inp.getAttribute('data-c'));
+  if(e.key==='Backspace'){
+    e.preventDefault();
+    if(inp.value){inp.value='';return;}
+    let wa=findWordCells(r,c,'across'),wd=findWordCells(r,c,'down');
+    let wp=(wa&&wa.cells.length>=2)?wa:wd;
+    if(wp){for(let i=1;i<wp.cells.length;i++){if(wp.cells[i].r===r&&wp.cells[i].c===c){
+      for(let j=i-1;j>=0;j--){
+        let p=wp.cells[j];let pi=document.getElementById('i-'+p.r+'-'+p.c);
+        if(pi&&!pi.readOnly){pi.value='';pi.focus();return;}
+      }
+      return;
+    }}}
+  }
+  else if(e.key==='ArrowRight'){e.preventDefault();autoAdvDir='across';moveInWord(r,c,'across',1);}
+  else if(e.key==='ArrowDown'){e.preventDefault();autoAdvDir='down';moveInWord(r,c,'down',1);}
+  else if(e.key==='ArrowLeft'){e.preventDefault();autoAdvDir='across';moveInWord(r,c,'across',-1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();autoAdvDir='down';moveInWord(r,c,'down',-1);}
+  else if(e.key==='Enter'){e.preventDefault();let d=autoAdvDir;if(!d){let wa=findWordCells(r,c,'across'),wd=findWordCells(r,c,'down');d=(wa&&wa.cells.length>=2)?'across':(wd?'down':null);autoAdvDir=d;}if(d&&!autoAdvance(r,c,d)){let fb=d==='across'?'down':'across';if(findWordCells(r,c,fb)){autoAdvDir=fb;autoAdvance(r,c,fb);}}}
+});
+
+document.getElementById('app').addEventListener('click',function(e){
+  let td=e.target.closest('td.cell');
+  if(!td||td.classList.contains('blk'))return;
+  let r=parseInt(td.getAttribute('data-r'));
+  let c=parseInt(td.getAttribute('data-c'));
+  if(isNaN(r)||isNaN(c))return;
+  focusCell(r,c);
+});
+
+function autoAdvance(r,c,dir){
+  let w=findWordCells(r,c,dir);if(!w)return false;
+  for(let i=0;i<w.cells.length;i++){
+    if(w.cells[i].r===r&&w.cells[i].c===c){
+      for(let j=i+1;j<w.cells.length;j++){
+        let nc=w.cells[j];let ni=document.getElementById('i-'+nc.r+'-'+nc.c);
+        if(ni&&!ni.readOnly){ar=nc.r;ac=nc.c;hl();ni.focus();return true;}
+      }
+      return false;
+    }
+  }
+  return false;
+}
+
+function moveInWord(r,c,dir,delta){
+  let w=findWordCells(r,c,dir);if(!w)return;
+  for(let i=0;i<w.cells.length;i++){
+    if(w.cells[i].r===r&&w.cells[i].c===c){
+      let j=i+delta;
+      while(j>=0&&j<w.cells.length){
+        let nc=w.cells[j];
+        let ni=document.getElementById('i-'+nc.r+'-'+nc.c);
+        if(ni&&!ni.readOnly){ar=nc.r;ac=nc.c;hl();ni.focus();return;}
+        j+=delta;
+      }
+      return;
+    }
+  }
+}
+
+function chk(){
+  let ok=0,tot=0;
+  document.querySelectorAll('.wlist .wt').forEach(el=>el.classList.remove('wok'));
+
+  for(let wp of wordPositions){
+    let wok=true;
+    wp.cells.forEach(({r,c,ch})=>{let inp=document.getElementById('i-'+r+'-'+c);if(!inp)return;tot++;if(inp.value.toUpperCase()===ch.toUpperCase())ok++;else wok=false;});
+    if(wok){
+      let prefix=wp.dir==='across'?'wa-':'wd-';
+      let wt=document.getElementById(prefix+wp.word);
+      if(wt)wt.classList.add('wok');
+    }
+  }
+  if(tot>0&&ok===tot){finish();}
+  else document.getElementById('msg').textContent=ok+'/'+tot+' 个字母正确，继续加油！';
+}
+
+function useHint(){
+  if(hintRemaining<=0) return;
+  // Try current cell first
+  let pick=null;
+  if(ar>=0&&ac>=0){
+    let k=`${ar},${ac}`;
+    if(!hintCells.has(k)){
+      let inp=document.getElementById('i-'+ar+'-'+ac);
+      if(inp&&!inp.value) pick={r:ar,c:ac};
+    }
+  }
+  // Find correct letter for the picked cell
+  if(pick){
+    for(let wp of wordPositions){
+      for(let cl of wp.cells){
+        if(cl.r===pick.r&&cl.c===pick.c){pick.ch=cl.ch;break;}
+      }
+    }
+  }
+  if(!pick||!pick.ch){
+    document.getElementById('msg').textContent=pick?'无法提示此格':'请先点击一个空格';
+    return;
+  }
+  let inp=document.getElementById('i-'+pick.r+'-'+pick.c);
+  if(inp){inp.value=pick.ch; inp.classList.add('hint'); inp.readOnly=true;}
+  hintRemaining--;
+  document.getElementById('msg').textContent='已提示: '+pick.ch;
+  let hbtn=document.querySelector('.btns .btn:nth-child(2)');
+  if(hbtn){
+    let left=hintRemaining;
+    if(left<=0) hbtn.textContent='已用完 (0)';
+    else hbtn.textContent='提示字母 ('+left+')';
+    if(left<=0) hbtn.disabled=true;
+  }
+}
+
+function clr(){
+  document.querySelectorAll('.g td input').forEach(inp=>{
+    let r=parseInt(inp.getAttribute('data-r')),c=parseInt(inp.getAttribute('data-c'));
+    if(isNaN(r)||isNaN(c))return;
+    if(hintCells.has(`${r},${c}`)||inp.classList.contains('hint'))return;
+    inp.value='';inp.classList.remove('hint');inp.readOnly=false;inp.style.color='';
+  });
+  document.getElementById('msg').textContent='';
+  let hbtn=document.querySelector('.btns .btn:nth-child(2)');
+  if(hbtn){hbtn.textContent='提示字母 ('+hintRemaining+')';if(hintRemaining<=0)hbtn.disabled=true;}
+}
+
+load(0);
+</script>
+</body>
+</html>
